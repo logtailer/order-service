@@ -2,7 +2,10 @@ version: '3.8'
 
 services:
   app:
-    build: .
+    image: order-service-optimized
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: order-service-app
     ports:
       - "5001:5000"
@@ -13,11 +16,25 @@ services:
       - DB_PASSWORD=postgres
       - DB_NAME=orderdb
       - DB_PORT=5432
+      - FLASK_ENV=development
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: on-failure
     networks:
       - order-network
+    # For development, mount code as volume
+    volumes:
+      - ./app:/order-service/app
+      - ./migrations:/order-service/migrations
+      - ./run.py:/order-service/run.py
+      - ./manage.py:/order-service/manage.py
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   db:
     image: postgres:14-alpine
@@ -32,6 +49,11 @@ services:
       - "5432:5432"
     networks:
       - order-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   order-network:

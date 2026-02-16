@@ -1,0 +1,58 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+.env
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Local dev/testing
+*.db
+*.sqlite3
+test-results/
+
+# K8s configuration
+k8s/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Documentation
+README.md
+LICENSE
+docs/
+
+# Cache
+.pytest_cache/
+.coverage
+htmlcov/
