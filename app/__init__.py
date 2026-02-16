@@ -16,4 +16,8 @@ app.config.from_object(Config)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
+# Create database tables if they don't exist
+with app.app_context():
+    db.create_all()
+
 from app import routes
