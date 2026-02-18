@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: order-service-migrations
+spec:
+  template:
+    spec:
+      containers:
+      - name: migrations
+        image: order-service:latest
+        args: ["migrate"]
+        envFrom:
+        - configMapRef:
+            name: order-service-config
+        - secretRef:
+            name: order-service-secrets
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+      restartPolicy: Never
+  backoffLimit: 4
