@@ -11,6 +11,8 @@ class StatusEnum(PyEnum):
     PENDING = 'pending'
     PROCESSING = 'processing'
     SHIPPED = 'shipped'
+    DELIVERED = 'delivered'
+    CANCELLED = 'cancelled'
 
 class Order(db.Model):
     """
