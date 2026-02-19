@@ -5,7 +5,7 @@ as well as calculating order totals and fetching orders based on specific criter
 """
 from datetime import datetime
 from app import db
-from app.models import Order, OrderItem
+from app.models import Order, OrderItem, StatusEnum
 
 class OrderService:
     """
@@ -209,7 +209,8 @@ class OrderService:
         try:
             order = db.session.get(Order, order_id)
             if order:
-                db.session.delete(order)
+                order.status = StatusEnum.CANCELLED
+                order.updated_at = datetime.utcnow()
                 db.session.commit()
                 return True
             return False

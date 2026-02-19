@@ -101,7 +101,8 @@ def update_order_status(order_id):
         valid_statuses = [
             StatusEnum.PENDING.value,
             StatusEnum.PROCESSING.value,
-            StatusEnum.SHIPPED.value
+            StatusEnum.SHIPPED.value,
+            StatusEnum.DELIVERED.value,
         ]
 
         if new_status not in valid_statuses:
