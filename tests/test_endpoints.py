@@ -132,7 +132,7 @@ class TestOrderEndpoints(unittest.TestCase):
             self.assertIsInstance(data, list)
 
     def test_cancel_order(self):
-        """ Test canceling an order by order ID """
+        """ Test canceling an order marks it as CANCELLED rather than deleting it """
         with app.app_context():
             order = Order(user_id=1, total_price=50.0, status=StatusEnum.PENDING)
             db.session.add(order)
@@ -146,9 +146,26 @@ class TestOrderEndpoints(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(data['message'], 'Order canceled')
 
-            # Check if the order is deleted from the database
-            deleted_order = db.session.get(Order, order_id)
-            self.assertIsNone(deleted_order)
+            cancelled_order = db.session.get(Order, order_id)
+            self.assertIsNotNone(cancelled_order)
+            self.assertEqual(cancelled_order.status, StatusEnum.CANCELLED)
+
+    def test_update_order_to_delivered(self):
+        """ Test updating an order status to delivered """
+        with app.app_context():
+            order = Order(user_id=1, total_price=75.0, status=StatusEnum.SHIPPED)
+            db.session.add(order)
+            db.session.commit()
+
+            order_id = order.id
+            response = self.app.patch(f'/orders/{order_id}', json={'status': 'delivered'})
+            data = json.loads(response.data.decode('utf-8'))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(data['message'], 'Order status updated')
+
+            updated_order = db.session.get(Order, order_id)
+            self.assertEqual(updated_order.status, StatusEnum.DELIVERED)
 
     def test_get_orders_by_status(self):
         """ Test retrieving orders by their status """
