@@ -113,8 +113,8 @@ def update_order_status(order_id):
             return jsonify({"message": "Order status updated"}), 200
         return jsonify({"message": "Order not found"}), 404
 
-    except ValueError:
-        return jsonify({"error": "Invalid JSON format"}), 400
+    except ValueError as exception:
+        return jsonify({"error": str(exception)}), 409
     except Exception as exception:
         return jsonify({"error": str(exception)}), 500
 

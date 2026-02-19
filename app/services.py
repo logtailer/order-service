@@ -151,12 +151,13 @@ class OrderService:
             if not order:
                 return False
 
-            new_status = status_data.get('status')
-            updated_at = datetime.utcnow()
+            terminal_statuses = {StatusEnum.DELIVERED, StatusEnum.CANCELLED}
+            if order.status in terminal_statuses:
+                raise ValueError(f"Order is already {order.status.value} and cannot be updated")
 
-            # Update the order status and updated_at timestamp
+            new_status = status_data.get('status')
             order.status = new_status.upper()
-            order.updated_at = updated_at
+            order.updated_at = datetime.utcnow()
             db.session.commit()
             return True
 
