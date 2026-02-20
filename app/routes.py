@@ -65,13 +65,14 @@ def create_order():
 
 @app.route('/orders', methods=['GET'])
 def get_orders():
-    """Route to retrieve all orders."""
+    """Route to retrieve orders with optional pagination."""
     try:
-        orders = order_service.get_all_orders()
-        return jsonify(orders), 200
+        page = request.args.get('page', 1, type=int)
+        per_page = min(request.args.get('per_page', 20, type=int), 100)
+        result = order_service.get_all_orders(page=page, per_page=per_page)
+        return jsonify(result), 200
     except Exception as exception:
-        error_message = str(exception)
-        return jsonify({"error": error_message}), 500
+        return jsonify({"error": str(exception)}), 500
 
 @app.route('/orders/<int:order_id>', methods=['GET'])
 def get_order_details(order_id):

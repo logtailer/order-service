@@ -60,16 +60,18 @@ class OrderService:
             db.session.rollback()
             raise exception
 
-    def get_all_orders(self):
+    def get_all_orders(self, page=1, per_page=20):
         """
-        Fetches all orders from the database and formats them into a list of dictionaries.
+        Fetches a paginated list of orders from the database.
 
         Returns:
-        list: A list containing dictionaries, each representing an order with the following keys:
+        dict: A dict with 'orders' list plus pagination metadata.
         """
-        orders = Order.query.all()
-        formated_orders = []
-        for order in orders:
+        pagination = Order.query.order_by(Order.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        orders = []
+        for order in pagination.items:
             items = []
             for item in order.items:
                 item_info = {
@@ -90,8 +92,15 @@ class OrderService:
                 'updated_at': order.updated_at,
                 'items': items
             }
-            formated_orders.append(formatted_order)
-        return formated_orders
+            orders.append(formatted_order)
+
+        return {
+            'orders': orders,
+            'total': pagination.total,
+            'page': pagination.page,
+            'pages': pagination.pages,
+            'per_page': pagination.per_page,
+        }
 
     def get_order_by_id(self, order_id):
         """
