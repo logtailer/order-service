@@ -13,6 +13,7 @@ Endpoints:
 - GET /orders/<int:order_id>/items: Get all order items for a specific order.
 """
 import logging
+from datetime import datetime
 from flask import jsonify, request
 from app.services import OrderService, OrderItemService
 from app import app
@@ -65,12 +66,27 @@ def create_order():
 
 @app.route('/orders', methods=['GET'])
 def get_orders():
-    """Route to retrieve orders with optional pagination."""
+    """Route to retrieve orders with optional pagination and date filtering."""
     try:
         page = request.args.get('page', 1, type=int)
         per_page = min(request.args.get('per_page', 20, type=int), 100)
-        result = order_service.get_all_orders(page=page, per_page=per_page)
+
+        created_after = None
+        created_before = None
+        if request.args.get('created_after'):
+            created_after = datetime.fromisoformat(request.args.get('created_after'))
+        if request.args.get('created_before'):
+            created_before = datetime.fromisoformat(request.args.get('created_before'))
+
+        result = order_service.get_all_orders(
+            page=page,
+            per_page=per_page,
+            created_after=created_after,
+            created_before=created_before,
+        )
         return jsonify(result), 200
+    except ValueError:
+        return jsonify({"error": "Invalid date format, use ISO 8601"}), 400
     except Exception as exception:
         return jsonify({"error": str(exception)}), 500
 
