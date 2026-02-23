@@ -65,7 +65,7 @@ class TestOrderEndpoints(unittest.TestCase):
             self.assertEqual(created_order.items.count(), 2)
 
     def test_get_orders(self):
-        """ Test retrieving all orders """
+        """ Test retrieving all orders returns paginated response """
         with app.app_context():
             order1 = Order(user_id=1, total_price=50.0, status=StatusEnum.SHIPPED)
             order2 = Order(user_id=2, total_price=30.0, status=StatusEnum.PENDING)
@@ -77,8 +77,45 @@ class TestOrderEndpoints(unittest.TestCase):
             data = json.loads(response.data.decode('utf-8'))
 
             self.assertEqual(response.status_code, 200)
-            self.assertIsInstance(data, list)
-            self.assertGreater(len(data), 0)
+            self.assertIn('orders', data)
+            self.assertIn('total', data)
+            self.assertIn('page', data)
+            self.assertIn('pages', data)
+            self.assertGreater(data['total'], 0)
+
+    def test_get_orders_pagination(self):
+        """ Test pagination limits returned results """
+        with app.app_context():
+            for i in range(5):
+                db.session.add(Order(user_id=i, total_price=10.0, status=StatusEnum.PENDING))
+            db.session.commit()
+
+            response = self.app.get('/orders?page=1&per_page=2')
+            data = json.loads(response.data.decode('utf-8'))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(data['orders']), 2)
+            self.assertEqual(data['per_page'], 2)
+            self.assertEqual(data['total'], 5)
+
+    def test_get_orders_date_filter(self):
+        """ Test filtering orders by created_after """
+        with app.app_context():
+            from datetime import datetime, timedelta
+            old_order = Order(user_id=1, total_price=10.0, status=StatusEnum.PENDING)
+            old_order.created_at = datetime(2025, 1, 1)
+            new_order = Order(user_id=2, total_price=20.0, status=StatusEnum.PENDING)
+            new_order.created_at = datetime(2026, 1, 1)
+            db.session.add(old_order)
+            db.session.add(new_order)
+            db.session.commit()
+
+            response = self.app.get('/orders?created_after=2025-06-01T00:00:00')
+            data = json.loads(response.data.decode('utf-8'))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(data['total'], 1)
+            self.assertEqual(data['orders'][0]['user_id'], 2)
 
     def test_get_order_details(self):
         """ Test retrieving details of a specific order by order ID """
