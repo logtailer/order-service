@@ -60,6 +60,14 @@ class OrderService:
             db.session.rollback()
             raise exception
 
+    def _build_orders_query(self, created_after=None, created_before=None):
+        query = Order.query
+        if created_after:
+            query = query.filter(Order.created_at >= created_after)
+        if created_before:
+            query = query.filter(Order.created_at <= created_before)
+        return query
+
     def get_all_orders(self, page=1, per_page=20, created_after=None, created_before=None):
         """
         Fetches a paginated list of orders from the database.
@@ -67,11 +75,7 @@ class OrderService:
         Returns:
         dict: A dict with 'orders' list plus pagination metadata.
         """
-        query = Order.query
-        if created_after:
-            query = query.filter(Order.created_at >= created_after)
-        if created_before:
-            query = query.filter(Order.created_at <= created_before)
+        query = self._build_orders_query(created_after=created_after, created_before=created_before)
 
         pagination = query.order_by(Order.created_at.desc()).paginate(
             page=page, per_page=per_page, error_out=False
