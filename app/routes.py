@@ -168,6 +168,15 @@ def get_orders_by_status(status):
     except Exception as exception:
         return jsonify({"error": str(exception)}), 500
 
+@app.route('/orders/summary', methods=['GET'])
+def get_orders_summary():
+    """Return order counts grouped by status."""
+    try:
+        summary = order_service.get_orders_summary()
+        return jsonify(summary), 200
+    except Exception as exception:
+        return jsonify({"error": str(exception)}), 500
+
 @app.route('/orders/<int:order_id>/items', methods=['GET'])
 def get_order_items(order_id):
     """Get all order items for a specific order."""

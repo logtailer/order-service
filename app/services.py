@@ -183,6 +183,20 @@ class OrderService:
             db.session.rollback()
             raise exception
 
+    def get_orders_summary(self):
+        """
+        Returns order counts grouped by status.
+
+        Returns:
+        - dict: Mapping of status value to count.
+        """
+        from sqlalchemy import func
+        results = db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all()
+        summary = {s.value: 0 for s in StatusEnum}
+        for status, count in results:
+            summary[status.value] = count
+        return summary
+
     def get_orders_by_status(self, status):
         """
         Retrieves orders by their status.
