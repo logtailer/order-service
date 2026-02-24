@@ -15,7 +15,7 @@ class OrderService:
     def create_new_order(self, order_data):
         """
         Creates a new order.
-        
+
         Args:
         - order_data (dict): Data for the new order.
 
@@ -80,32 +80,9 @@ class OrderService:
         pagination = query.order_by(Order.created_at.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
-        orders = []
-        for order in pagination.items:
-            items = []
-            for item in order.items:
-                item_info = {
-                    'id': item.id,
-                    'product_id': item.product_id,
-                    'quantity': item.quantity,
-                    'price': item.price,
-                    'created_at': item.created_at
-                }
-                items.append(item_info)
-
-            formatted_order = {
-                'id': order.id,
-                'user_id': order.user_id,
-                'total_price': order.total_price,
-                'status': order.status.value,
-                'created_at': order.created_at,
-                'updated_at': order.updated_at,
-                'items': items
-            }
-            orders.append(formatted_order)
 
         return {
-            'orders': orders,
+            'orders': [order.to_dict() for order in pagination.items],
             'total': pagination.total,
             'page': pagination.page,
             'pages': pagination.pages,
@@ -127,29 +104,7 @@ class OrderService:
         """
         try:
             order = db.session.get(Order, order_id)
-            if order:
-                items = []
-                for item in order.items:
-                    item_info = {
-                        'id': item.id,
-                        'product_id': item.product_id,
-                        'quantity': item.quantity,
-                        'price': item.price,
-                        'created_at': item.created_at
-                    }
-                    items.append(item_info)
-
-                order_serialized = {
-                    'id': order.id,
-                    'user_id': order.user_id,
-                    'total_price': order.total_price,
-                    'status': order.status.value,
-                    'created_at': order.created_at,
-                    'updated_at': order.updated_at,
-                    'items': items
-                }
-                return order_serialized
-            return None
+            return order.to_dict() if order else None
         except Exception as exception:
             raise exception
 
@@ -199,17 +154,7 @@ class OrderService:
         """
         try:
             orders = Order.query.filter_by(user_id=user_id).all()
-            formated_orders = []
-            for order in orders:
-                formated_order = {
-                    'id': order.id,
-                    'user_id': order.user_id,
-                    'total_price': order.total_price,
-                    'status': order.status.value
-                    }
-                formated_orders.append(formated_order)
-
-            return formated_orders
+            return [order.to_dict(include_items=False) for order in orders]
         except Exception as exception:
             raise exception
 
@@ -253,31 +198,10 @@ class OrderService:
         """
         try:
             orders = Order.query.filter_by(status=status.upper()).all()
-            formated_orders = []
-            for order in orders:
-                items = []
-                for item in order.items:
-                    item_info = {
-                        'id': item.id,
-                        'product_id': item.product_id,
-                        'quantity': item.quantity,
-                        'price': item.price,
-                        'created_at': item.created_at
-                    }
-                    items.append(item_info)
-                formated_order = {
-                    'id': order.id,
-                    'user_id': order.user_id,
-                    'total_price': order.total_price,
-                    'items': items,
-                    'created_at':order.created_at,
-                    'updated_at':order.updated_at,
-                    'status': order.status.value
-                    }
-                formated_orders.append(formated_order)
-            return formated_orders
+            return [order.to_dict() for order in orders]
         except Exception as exception:
             raise exception
+
 
 class OrderItemService:
     """
@@ -299,17 +223,6 @@ class OrderItemService:
         """
         try:
             items = OrderItem.query.filter_by(order_id=order_id).all()
-            formatted_items = []
-            for item in items:
-                formatted_item = {
-                    'id': item.id,
-                    'order_id': item.order_id,
-                    'product_id': item.product_id,
-                    'quantity': item.quantity,
-                    'price': item.price,
-                    'created_at': item.created_at,
-                }
-                formatted_items.append(formatted_item)
-            return formatted_items
+            return [item.to_dict() for item in items]
         except Exception as exception:
             raise exception
