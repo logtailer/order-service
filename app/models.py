@@ -34,6 +34,19 @@ class Order(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.Enum(StatusEnum), default=StatusEnum.PENDING)
 
+    def to_dict(self, include_items=True):
+        data = {
+            'id': self.id,
+            'user_id': self.user_id,
+            'total_price': self.total_price,
+            'status': self.status.value,
+            'created_at': self.created_at,
+            'updated_at': self.updated_at,
+        }
+        if include_items:
+            data['items'] = [item.to_dict() for item in self.items]
+        return data
+
     def __repr__(self):
         return f"<Order id={self.id}, user_id={self.user_id}, " \
                f"total_price={self.total_price}, status='{self.status}'>"
@@ -52,6 +65,16 @@ class OrderItem(db.Model):
     quantity = db.Column(db.Integer)
     price = db.Column(db.Float)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'order_id': self.order_id,
+            'product_id': self.product_id,
+            'quantity': self.quantity,
+            'price': self.price,
+            'created_at': self.created_at,
+        }
 
     def __repr__(self):
         return f"<OrderItem id={self.id}, order_id={self.order_id}, " \
