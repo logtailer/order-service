@@ -58,6 +58,12 @@ def create_order():
         if status not in valid_statuses:
             return jsonify({"error": "Invalid status provided"}), 400
 
+        for item in order_data.get('items', []):
+            if not item.get('quantity') or item['quantity'] <= 0:
+                return jsonify({"error": "Item quantity must be greater than 0"}), 400
+            if not item.get('price') or item['price'] <= 0:
+                return jsonify({"error": "Item price must be greater than 0"}), 400
+
         order_id = order_service.create_new_order(order_data)
         return jsonify({"message": "New order created", "order_id": order_id}), 201
 
