@@ -88,11 +88,22 @@ def get_orders():
         if request.args.get('created_before'):
             created_before = datetime.fromisoformat(request.args.get('created_before'))
 
+        sort_by = request.args.get('sort_by', 'created_at')
+        sort_order = request.args.get('sort_order', 'desc')
+
+        valid_sort_fields = ['created_at', 'updated_at', 'total_price']
+        if sort_by not in valid_sort_fields:
+            return jsonify({"error": f"sort_by must be one of: {', '.join(valid_sort_fields)}"}), 400
+        if sort_order not in ('asc', 'desc'):
+            return jsonify({"error": "sort_order must be 'asc' or 'desc'"}), 400
+
         result = order_service.get_all_orders(
             page=page,
             per_page=per_page,
             created_after=created_after,
             created_before=created_before,
+            sort_by=sort_by,
+            sort_order=sort_order,
         )
         return jsonify(result), 200
     except ValueError:

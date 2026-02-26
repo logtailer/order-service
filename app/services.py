@@ -68,7 +68,8 @@ class OrderService:
             query = query.filter(Order.created_at <= created_before)
         return query
 
-    def get_all_orders(self, page=1, per_page=20, created_after=None, created_before=None):
+    def get_all_orders(self, page=1, per_page=20, created_after=None, created_before=None,
+                       sort_by='created_at', sort_order='desc'):
         """
         Fetches a paginated list of orders from the database.
 
@@ -77,9 +78,13 @@ class OrderService:
         """
         query = self._build_orders_query(created_after=created_after, created_before=created_before)
 
-        pagination = query.order_by(Order.created_at.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
+        sort_column = getattr(Order, sort_by, Order.created_at)
+        if sort_order == 'asc':
+            query = query.order_by(sort_column.asc())
+        else:
+            query = query.order_by(sort_column.desc())
+
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
         return {
             'orders': [order.to_dict() for order in pagination.items],
