@@ -1,29 +1,28 @@
-"""
-This module contains routes for managing orders.
-
-Endpoints:
-- GET /health: Health check endpoint returning a success status.
-- POST /orders: Create a new order.
-- GET /orders: Retrieve all orders.
-- GET /orders/<int:order_id>: Get details of a specific order by order ID.
-- PATCH /orders/<int:order_id>: Update the status of an order by order ID.
-- GET /orders/user/<int:user_id>: Get orders associated with a specific user.
-- DELETE /orders/<int:order_id>: Cancel an order by order ID.
-- GET /orders/status/<string:status>: Get orders by their status.
-- GET /orders/<int:order_id>/items: Get all order items for a specific order.
-- PATCH /orders/bulk-status: Update status for a list of order IDs.
-"""
+"""Routes for the orders blueprint and app-level error handlers."""
 import logging
 from datetime import datetime
 from flask import Blueprint, jsonify, request
 from sqlalchemy import text
-from app.services import OrderService, OrderItemService
 from app import app, db
 from app.models import StatusEnum
+from app.services import (
+    create_new_order,
+    get_all_orders,
+    get_order_by_id,
+    update_order_status,
+    get_orders_by_user,
+    cancel_order,
+    get_orders_by_status,
+    get_orders_summary,
+    bulk_update_status,
+    update_order_notes,
+    count_orders,
+    get_order_history,
+    get_order_items,
+    update_order_item,
+)
 
 orders_bp = Blueprint('orders', __name__, url_prefix='/orders')
-order_service = OrderService()
-order_item_service = OrderItemService()
 
 
 @app.route('/health', methods=['GET'])
@@ -68,7 +67,7 @@ def create_order():
             if not item.get('price') or item['price'] <= 0:
                 return jsonify({"error": "Item price must be greater than 0"}), 400
 
-        order_id = order_service.create_new_order(order_data)
+        order_id = create_new_order(order_data)
         return jsonify({"message": "New order created", "order_id": order_id}), 201
 
     except KeyError as exception:
@@ -81,7 +80,7 @@ def create_order():
 
 @orders_bp.route('', methods=['GET'])
 def get_orders():
-    """Route to retrieve orders with optional pagination and date filtering."""
+    """Retrieve orders with optional pagination, filtering, and sorting."""
     try:
         page = request.args.get('page', 1, type=int)
         per_page = min(request.args.get('per_page', 20, type=int), 100)
@@ -114,7 +113,7 @@ def get_orders():
         if status and status not in [s.value for s in StatusEnum]:
             return jsonify({"error": f"status must be one of: {', '.join(s.value for s in StatusEnum)}"}), 400
 
-        result = order_service.get_all_orders(
+        result = get_all_orders(
             page=page,
             per_page=per_page,
             created_after=created_after,
@@ -160,7 +159,7 @@ def bulk_update_order_status():
         if new_status.lower() not in valid_statuses:
             return jsonify({"error": "Invalid status provided"}), 400
 
-        result = order_service.bulk_update_status(order_ids, new_status)
+        result = bulk_update_status(order_ids, new_status)
         return jsonify(result), 200
 
     except Exception as exception:
@@ -171,7 +170,7 @@ def bulk_update_order_status():
 def get_order_details(order_id):
     """Get details of a specific order by order ID."""
     try:
-        order = order_service.get_order_by_id(order_id)
+        order = get_order_by_id(order_id)
         if order:
             return jsonify(order), 200
         return jsonify({"message": "Order not found"}), 404
@@ -181,7 +180,7 @@ def get_order_details(order_id):
 
 
 @orders_bp.route('/<int:order_id>', methods=['PATCH'])
-def update_order_status(order_id):
+def update_order_status_route(order_id):
     """Update the status of an order by order ID."""
     try:
         status_data = request.json
@@ -204,7 +203,7 @@ def update_order_status(order_id):
             return jsonify({"error": "Invalid status provided"}), 400
 
         reason = status_data.get('reason')
-        success = order_service.update_order_status(order_id, status_data, reason=reason)
+        success = update_order_status(order_id, status_data, reason=reason)
         if success:
             return jsonify({"message": "Order status updated"}), 200
         return jsonify({"message": "Order not found"}), 404
@@ -216,10 +215,10 @@ def update_order_status(order_id):
 
 
 @orders_bp.route('/user/<int:user_id>', methods=['GET'])
-def get_orders_by_user(user_id):
+def get_orders_by_user_route(user_id):
     """Get orders associated with a specific user."""
     try:
-        orders = order_service.get_orders_by_user(user_id)
+        orders = get_orders_by_user(user_id)
         return jsonify(orders), 200
 
     except Exception as exception:
@@ -228,12 +227,12 @@ def get_orders_by_user(user_id):
 
 
 @orders_bp.route('/<int:order_id>', methods=['DELETE'])
-def cancel_order(order_id):
+def cancel_order_route(order_id):
     """Cancel an order by order ID. Accepts optional JSON body with 'reason'."""
     try:
         body = request.get_json(silent=True) or {}
         reason = body.get('reason')
-        success = order_service.cancel_order(order_id, reason=reason)
+        success = cancel_order(order_id, reason=reason)
         if success:
             return jsonify({"message": "Order canceled"}), 200
         return jsonify({"message": "Order not found"}), 404
@@ -243,10 +242,10 @@ def cancel_order(order_id):
 
 
 @orders_bp.route('/status/<string:status>', methods=['GET'])
-def get_orders_by_status(status):
+def get_orders_by_status_route(status):
     """Get orders by their status."""
     try:
-        orders = order_service.get_orders_by_status(status)
+        orders = get_orders_by_status(status)
         return jsonify(orders), 200
 
     except Exception as exception:
@@ -254,12 +253,12 @@ def get_orders_by_status(status):
 
 
 @orders_bp.route('/<int:order_id>/notes', methods=['PATCH'])
-def update_order_notes(order_id):
+def update_order_notes_route(order_id):
     """Set or clear the notes on an order."""
     try:
         body = request.get_json(silent=True) or {}
         notes = body.get('notes')
-        success = order_service.update_order_notes(order_id, notes)
+        success = update_order_notes(order_id, notes)
         if not success:
             return jsonify({"message": "Order not found"}), 404
         return jsonify({"message": "Notes updated"}), 200
@@ -277,28 +276,28 @@ def get_orders_count():
         if status and status not in [s.value for s in StatusEnum]:
             return jsonify({"error": f"status must be one of: {', '.join(s.value for s in StatusEnum)}"}), 400
 
-        count = order_service.count_orders(status=status, user_id=user_id)
+        count = count_orders(status=status, user_id=user_id)
         return jsonify({"count": count}), 200
     except Exception as exception:
         return jsonify({"error": str(exception)}), 500
 
 
 @orders_bp.route('/summary', methods=['GET'])
-def get_orders_summary():
+def get_orders_summary_route():
     """Return order counts grouped by status."""
     try:
-        summary = order_service.get_orders_summary()
+        summary = get_orders_summary()
         return jsonify(summary), 200
     except Exception as exception:
         return jsonify({"error": str(exception)}), 500
 
 
 @orders_bp.route('/<int:order_id>/items', methods=['GET'])
-def get_order_items(order_id):
+def get_order_items_route(order_id):
     """Get all order items for a specific order, optionally filtered by product_id."""
     try:
         product_id = request.args.get('product_id', type=int)
-        items = order_item_service.get_order_items(order_id, product_id=product_id)
+        items = get_order_items(order_id, product_id=product_id)
         return jsonify(items), 200
 
     except Exception as exception:
@@ -306,7 +305,7 @@ def get_order_items(order_id):
 
 
 @orders_bp.route('/<int:order_id>/items/<int:item_id>', methods=['PATCH'])
-def update_order_item(order_id, item_id):
+def update_order_item_route(order_id, item_id):
     """Update the quantity of a specific order item."""
     try:
         body = request.get_json(silent=True) or {}
@@ -317,7 +316,7 @@ def update_order_item(order_id, item_id):
         if not isinstance(quantity, int) or quantity <= 0:
             return jsonify({"error": "quantity must be a positive integer"}), 400
 
-        result = order_item_service.update_order_item(order_id, item_id, quantity)
+        result = update_order_item(order_id, item_id, quantity)
         if result is None:
             return jsonify({"message": "Order or item not found"}), 404
         return jsonify(result), 200
@@ -329,13 +328,13 @@ def update_order_item(order_id, item_id):
 
 
 @orders_bp.route('/<int:order_id>/history', methods=['GET'])
-def get_order_history(order_id):
+def get_order_history_route(order_id):
     """Return the status transition history for an order."""
     try:
-        order = order_service.get_order_by_id(order_id)
+        order = get_order_by_id(order_id)
         if not order:
             return jsonify({"message": "Order not found"}), 404
-        history = order_service.get_order_history(order_id)
+        history = get_order_history(order_id)
         return jsonify(history), 200
     except Exception as exception:
         return jsonify({"error": str(exception)}), 500
