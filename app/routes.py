@@ -15,8 +15,9 @@ Endpoints:
 import logging
 from datetime import datetime
 from flask import jsonify, request
+from sqlalchemy import text
 from app.services import OrderService, OrderItemService
-from app import app
+from app import app, db
 from app.models import StatusEnum
 
 order_service = OrderService()
@@ -24,11 +25,14 @@ order_item_service = OrderItemService()
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """health check returning a success status"""
-    application_status = {
-        'status': 'healthy'
-    }
-    return jsonify(application_status), 200
+    """Health check including database connectivity status."""
+    try:
+        db.session.execute(text('SELECT 1'))
+        db_status = 'connected'
+    except Exception:
+        db_status = 'disconnected'
+
+    return jsonify({'status': 'healthy', 'db': db_status}), 200
 
 @app.route('/orders', methods=['POST'])
 def create_order():
