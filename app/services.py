@@ -60,23 +60,31 @@ class OrderService:
             db.session.rollback()
             raise exception
 
-    def _build_orders_query(self, created_after=None, created_before=None):
+    def _build_orders_query(self, created_after=None, created_before=None,
+                            status=None, user_id=None):
         query = Order.query
         if created_after:
             query = query.filter(Order.created_at >= created_after)
         if created_before:
             query = query.filter(Order.created_at <= created_before)
+        if status:
+            query = query.filter(Order.status == status.upper())
+        if user_id:
+            query = query.filter(Order.user_id == user_id)
         return query
 
     def get_all_orders(self, page=1, per_page=20, created_after=None, created_before=None,
-                       sort_by='created_at', sort_order='desc'):
+                       sort_by='created_at', sort_order='desc', status=None, user_id=None):
         """
         Fetches a paginated list of orders from the database.
 
         Returns:
         dict: A dict with 'orders' list plus pagination metadata.
         """
-        query = self._build_orders_query(created_after=created_after, created_before=created_before)
+        query = self._build_orders_query(
+            created_after=created_after, created_before=created_before,
+            status=status, user_id=user_id,
+        )
 
         sort_column = getattr(Order, sort_by, Order.created_at)
         if sort_order == 'asc':

@@ -90,12 +90,16 @@ def get_orders():
 
         sort_by = request.args.get('sort_by', 'created_at')
         sort_order = request.args.get('sort_order', 'desc')
+        status = request.args.get('status')
+        user_id = request.args.get('user_id', type=int)
 
         valid_sort_fields = ['created_at', 'updated_at', 'total_price']
         if sort_by not in valid_sort_fields:
             return jsonify({"error": f"sort_by must be one of: {', '.join(valid_sort_fields)}"}), 400
         if sort_order not in ('asc', 'desc'):
             return jsonify({"error": "sort_order must be 'asc' or 'desc'"}), 400
+        if status and status not in [s.value for s in StatusEnum]:
+            return jsonify({"error": f"status must be one of: {', '.join(s.value for s in StatusEnum)}"}), 400
 
         result = order_service.get_all_orders(
             page=page,
@@ -104,6 +108,8 @@ def get_orders():
             created_before=created_before,
             sort_by=sort_by,
             sort_order=sort_order,
+            status=status,
+            user_id=user_id,
         )
         return jsonify(result), 200
     except ValueError:
