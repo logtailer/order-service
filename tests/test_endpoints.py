@@ -238,5 +238,85 @@ class TestOrderEndpoints(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertIsInstance(data, list)
 
+    def test_health_check_includes_db_status(self):
+        """ Test that health check returns db connectivity status """
+        with app.app_context():
+            response = self.app.get('/health')
+            data = json.loads(response.data.decode('utf-8'))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertIn('db', data)
+            self.assertEqual(data['db'], 'connected')
+
+    def test_create_order_rejects_zero_quantity(self):
+        """ Test that order creation fails when item quantity is zero """
+        with app.app_context():
+            order_data = {
+                'user_id': 1,
+                'status': 'pending',
+                'items': [{'product_id': 1, 'quantity': 0, 'price': 10.0}]
+            }
+            response = self.app.post('/orders', json=order_data)
+            self.assertEqual(response.status_code, 400)
+
+    def test_create_order_rejects_negative_price(self):
+        """ Test that order creation fails when item price is negative """
+        with app.app_context():
+            order_data = {
+                'user_id': 1,
+                'status': 'pending',
+                'items': [{'product_id': 1, 'quantity': 2, 'price': -5.0}]
+            }
+            response = self.app.post('/orders', json=order_data)
+            self.assertEqual(response.status_code, 400)
+
+    def test_update_terminal_order_returns_409(self):
+        """ Test that updating a CANCELLED order returns 409 """
+        with app.app_context():
+            order = Order(user_id=1, total_price=50.0, status=StatusEnum.CANCELLED)
+            db.session.add(order)
+            db.session.commit()
+
+            response = self.app.patch(f'/orders/{order.id}', json={'status': 'pending'})
+            self.assertEqual(response.status_code, 409)
+
+    def test_get_orders_summary(self):
+        """ Test that summary endpoint returns counts per status """
+        with app.app_context():
+            db.session.add(Order(user_id=1, total_price=10.0, status=StatusEnum.PENDING))
+            db.session.add(Order(user_id=2, total_price=20.0, status=StatusEnum.PENDING))
+            db.session.add(Order(user_id=3, total_price=30.0, status=StatusEnum.SHIPPED))
+            db.session.commit()
+
+            response = self.app.get('/orders/summary')
+            data = json.loads(response.data.decode('utf-8'))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(data['pending'], 2)
+            self.assertEqual(data['shipped'], 1)
+            self.assertIn('delivered', data)
+            self.assertIn('cancelled', data)
+
+    def test_get_orders_sort_by_total_price_asc(self):
+        """ Test sorting orders by total_price ascending """
+        with app.app_context():
+            db.session.add(Order(user_id=1, total_price=100.0, status=StatusEnum.PENDING))
+            db.session.add(Order(user_id=2, total_price=10.0, status=StatusEnum.PENDING))
+            db.session.add(Order(user_id=3, total_price=50.0, status=StatusEnum.PENDING))
+            db.session.commit()
+
+            response = self.app.get('/orders?sort_by=total_price&sort_order=asc')
+            data = json.loads(response.data.decode('utf-8'))
+
+            self.assertEqual(response.status_code, 200)
+            prices = [o['total_price'] for o in data['orders']]
+            self.assertEqual(prices, sorted(prices))
+
+    def test_get_orders_invalid_sort_field(self):
+        """ Test that an unknown sort_by value returns 400 """
+        with app.app_context():
+            response = self.app.get('/orders?sort_by=user_id')
+            self.assertEqual(response.status_code, 400)
+
 if __name__ == '__main__':
     unittest.main()
