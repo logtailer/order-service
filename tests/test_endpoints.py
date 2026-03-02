@@ -318,5 +318,59 @@ class TestOrderEndpoints(unittest.TestCase):
             response = self.app.get('/orders?sort_by=user_id')
             self.assertEqual(response.status_code, 400)
 
+    def test_get_orders_filter_by_status(self):
+        """ Test filtering orders by status query param """
+        with app.app_context():
+            db.session.add(Order(user_id=1, total_price=20.0, status=StatusEnum.PENDING))
+            db.session.add(Order(user_id=2, total_price=30.0, status=StatusEnum.SHIPPED))
+            db.session.add(Order(user_id=3, total_price=40.0, status=StatusEnum.SHIPPED))
+            db.session.commit()
+
+            response = self.app.get('/orders?status=shipped')
+            data = json.loads(response.data.decode('utf-8'))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(data['total'], 2)
+            for order in data['orders']:
+                self.assertEqual(order['status'], 'shipped')
+
+    def test_get_orders_filter_by_user_id(self):
+        """ Test filtering orders by user_id query param """
+        with app.app_context():
+            db.session.add(Order(user_id=7, total_price=15.0, status=StatusEnum.PENDING))
+            db.session.add(Order(user_id=7, total_price=25.0, status=StatusEnum.PROCESSING))
+            db.session.add(Order(user_id=9, total_price=10.0, status=StatusEnum.PENDING))
+            db.session.commit()
+
+            response = self.app.get('/orders?user_id=7')
+            data = json.loads(response.data.decode('utf-8'))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(data['total'], 2)
+            for order in data['orders']:
+                self.assertEqual(order['user_id'], 7)
+
+    def test_get_orders_filter_by_status_and_user_id(self):
+        """ Test combining status and user_id filters """
+        with app.app_context():
+            db.session.add(Order(user_id=5, total_price=10.0, status=StatusEnum.PENDING))
+            db.session.add(Order(user_id=5, total_price=20.0, status=StatusEnum.SHIPPED))
+            db.session.add(Order(user_id=6, total_price=30.0, status=StatusEnum.PENDING))
+            db.session.commit()
+
+            response = self.app.get('/orders?user_id=5&status=pending')
+            data = json.loads(response.data.decode('utf-8'))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(data['total'], 1)
+            self.assertEqual(data['orders'][0]['user_id'], 5)
+            self.assertEqual(data['orders'][0]['status'], 'pending')
+
+    def test_get_orders_invalid_status_filter(self):
+        """ Test that an unknown status value returns 400 """
+        with app.app_context():
+            response = self.app.get('/orders?status=bogus')
+            self.assertEqual(response.status_code, 400)
+
 if __name__ == '__main__':
     unittest.main()
