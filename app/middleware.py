@@ -29,12 +29,11 @@ def register_logging_middleware(app):
 
 
 def register_auth_middleware(app):
-    api_key = os.environ.get("API_KEY", "")
-
     @app.before_request
     def _check_api_key():
-        if not request.path.startswith("/orders") and request.path != "/health":
+        if not request.path.startswith("/orders"):
             return
+        api_key = os.environ.get("API_KEY", "")
         if not api_key:
             return
         if request.headers.get("X-API-Key") != api_key:

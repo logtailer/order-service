@@ -372,5 +372,66 @@ class TestOrderEndpoints(unittest.TestCase):
             response = self.app.get('/orders?status=bogus')
             self.assertEqual(response.status_code, 400)
 
+class TestAuthMiddleware(unittest.TestCase):
+    def setUp(self):
+        self.app = app.test_client()
+        app.config['TESTING'] = True
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+        with app.app_context():
+            db.create_all()
+
+    def tearDown(self):
+        with app.app_context():
+            db.session.remove()
+            db.drop_all()
+
+    def test_request_rejected_without_api_key(self):
+        """ Test that requests are rejected when API_KEY env var is set """
+        import os
+        os.environ['API_KEY'] = 'secret-key'
+        try:
+            response = self.app.get('/orders')
+            self.assertEqual(response.status_code, 401)
+        finally:
+            del os.environ['API_KEY']
+
+    def test_request_accepted_with_valid_api_key(self):
+        """ Test that requests succeed with correct API key header """
+        import os
+        os.environ['API_KEY'] = 'secret-key'
+        try:
+            response = self.app.get('/orders', headers={'X-API-Key': 'secret-key'})
+            self.assertEqual(response.status_code, 200)
+        finally:
+            del os.environ['API_KEY']
+
+    def test_request_rejected_with_wrong_api_key(self):
+        """ Test that wrong API key returns 401 """
+        import os
+        os.environ['API_KEY'] = 'secret-key'
+        try:
+            response = self.app.get('/orders', headers={'X-API-Key': 'wrong'})
+            self.assertEqual(response.status_code, 401)
+        finally:
+            del os.environ['API_KEY']
+
+    def test_health_check_bypasses_auth(self):
+        """ Test that /health does not require API key """
+        import os
+        os.environ['API_KEY'] = 'secret-key'
+        try:
+            response = self.app.get('/health')
+            self.assertEqual(response.status_code, 200)
+        finally:
+            del os.environ['API_KEY']
+
+    def test_no_auth_required_when_api_key_not_configured(self):
+        """ Test that auth is skipped when API_KEY is not set """
+        import os
+        os.environ.pop('API_KEY', None)
+        response = self.app.get('/orders')
+        self.assertEqual(response.status_code, 200)
+
+
 if __name__ == '__main__':
     unittest.main()
