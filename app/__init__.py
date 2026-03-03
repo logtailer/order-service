@@ -21,5 +21,6 @@ with app.app_context():
     db.create_all()
 
 from app import routes
-from app.middleware import register_logging_middleware
+from app.middleware import register_logging_middleware, register_auth_middleware
 register_logging_middleware(app)
+register_auth_middleware(app)

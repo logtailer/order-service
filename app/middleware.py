@@ -1,7 +1,8 @@
+import os
 import time
 import uuid
 import logging
-from flask import request, g
+from flask import request, g, jsonify
 
 logger = logging.getLogger(__name__)
 
@@ -25,3 +26,16 @@ def register_logging_middleware(app):
         )
         response.headers["X-Request-Id"] = g.request_id
         return response
+
+
+def register_auth_middleware(app):
+    api_key = os.environ.get("API_KEY", "")
+
+    @app.before_request
+    def _check_api_key():
+        if not request.path.startswith("/orders") and request.path != "/health":
+            return
+        if not api_key:
+            return
+        if request.headers.get("X-API-Key") != api_key:
+            return jsonify({"error": "unauthorized"}), 401
