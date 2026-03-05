@@ -213,3 +213,13 @@ def get_order_items(order_id):
 
     except Exception as exception:
         return jsonify({"error": str(exception)}), 500
+
+
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({"error": "not found"}), 404
+
+
+@app.errorhandler(405)
+def method_not_allowed(e):
+    return jsonify({"error": "method not allowed"}), 405
