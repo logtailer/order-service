@@ -92,6 +92,8 @@ def get_orders():
         sort_order = request.args.get('sort_order', 'desc')
         status = request.args.get('status')
         user_id = request.args.get('user_id', type=int)
+        min_price = request.args.get('min_price', type=float)
+        max_price = request.args.get('max_price', type=float)
 
         valid_sort_fields = ['created_at', 'updated_at', 'total_price']
         if sort_by not in valid_sort_fields:
@@ -110,6 +112,8 @@ def get_orders():
             sort_order=sort_order,
             status=status,
             user_id=user_id,
+            min_price=min_price,
+            max_price=max_price,
         )
         return jsonify(result), 200
     except ValueError:
