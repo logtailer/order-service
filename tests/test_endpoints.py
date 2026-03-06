@@ -372,6 +372,54 @@ class TestOrderEndpoints(unittest.TestCase):
             response = self.app.get('/orders?status=bogus')
             self.assertEqual(response.status_code, 400)
 
+    def test_get_orders_filter_by_min_price(self):
+        """ Test filtering orders with min_price """
+        with app.app_context():
+            db.session.add(Order(user_id=1, total_price=10.0, status=StatusEnum.PENDING))
+            db.session.add(Order(user_id=2, total_price=50.0, status=StatusEnum.PENDING))
+            db.session.add(Order(user_id=3, total_price=200.0, status=StatusEnum.PENDING))
+            db.session.commit()
+
+            response = self.app.get('/orders?min_price=40')
+            data = json.loads(response.data.decode('utf-8'))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(data['total'], 2)
+            for order in data['orders']:
+                self.assertGreaterEqual(order['total_price'], 40)
+
+    def test_get_orders_filter_by_max_price(self):
+        """ Test filtering orders with max_price """
+        with app.app_context():
+            db.session.add(Order(user_id=1, total_price=10.0, status=StatusEnum.PENDING))
+            db.session.add(Order(user_id=2, total_price=50.0, status=StatusEnum.PENDING))
+            db.session.add(Order(user_id=3, total_price=200.0, status=StatusEnum.PENDING))
+            db.session.commit()
+
+            response = self.app.get('/orders?max_price=50')
+            data = json.loads(response.data.decode('utf-8'))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(data['total'], 2)
+            for order in data['orders']:
+                self.assertLessEqual(order['total_price'], 50)
+
+    def test_get_orders_filter_by_price_range(self):
+        """ Test filtering orders with both min_price and max_price """
+        with app.app_context():
+            db.session.add(Order(user_id=1, total_price=10.0, status=StatusEnum.PENDING))
+            db.session.add(Order(user_id=2, total_price=75.0, status=StatusEnum.PENDING))
+            db.session.add(Order(user_id=3, total_price=200.0, status=StatusEnum.PENDING))
+            db.session.commit()
+
+            response = self.app.get('/orders?min_price=20&max_price=100')
+            data = json.loads(response.data.decode('utf-8'))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(data['total'], 1)
+            self.assertEqual(data['orders'][0]['total_price'], 75.0)
+
+
 class TestAuthMiddleware(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()
