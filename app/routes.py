@@ -121,6 +121,38 @@ def get_orders():
     except Exception as exception:
         return jsonify({"error": str(exception)}), 500
 
+@app.route('/orders/bulk-status', methods=['PATCH'])
+def bulk_update_order_status():
+    """Update status for a list of order IDs in one request."""
+    try:
+        body = request.json
+        if not body:
+            return jsonify({"error": "No data provided"}), 400
+
+        order_ids = body.get('order_ids')
+        new_status = body.get('status')
+
+        if not order_ids or not isinstance(order_ids, list):
+            return jsonify({"error": "order_ids must be a non-empty list"}), 400
+        if not new_status:
+            return jsonify({"error": "status is required"}), 400
+
+        valid_statuses = [
+            StatusEnum.PENDING.value,
+            StatusEnum.PROCESSING.value,
+            StatusEnum.SHIPPED.value,
+            StatusEnum.DELIVERED.value,
+        ]
+        if new_status.lower() not in valid_statuses:
+            return jsonify({"error": "Invalid status provided"}), 400
+
+        result = order_service.bulk_update_status(order_ids, new_status)
+        return jsonify(result), 200
+
+    except Exception as exception:
+        return jsonify({"error": str(exception)}), 500
+
+
 @app.route('/orders/<int:order_id>', methods=['GET'])
 def get_order_details(order_id):
     """Get details of a specific order by order ID."""

@@ -216,6 +216,34 @@ class OrderService:
             summary[status.value] = count
         return summary
 
+    def bulk_update_status(self, order_ids, new_status):
+        """
+        Update status for multiple orders at once.
+
+        Returns:
+        - dict: counts of updated and skipped (terminal-state) orders.
+        """
+        updated, skipped = [], []
+        terminal_statuses = {StatusEnum.DELIVERED, StatusEnum.CANCELLED}
+        now = datetime.utcnow()
+
+        for order_id in order_ids:
+            order = db.session.get(Order, order_id)
+            if not order or order.status in terminal_statuses:
+                skipped.append(order_id)
+                continue
+            order.status = new_status.upper()
+            order.updated_at = now
+            updated.append(order_id)
+
+        try:
+            db.session.commit()
+        except Exception as exception:
+            db.session.rollback()
+            raise exception
+
+        return {"updated": updated, "skipped": skipped}
+
     def get_orders_by_status(self, status):
         """
         Retrieves orders by their status.
