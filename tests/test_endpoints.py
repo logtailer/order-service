@@ -420,6 +420,70 @@ class TestOrderEndpoints(unittest.TestCase):
             self.assertEqual(data['orders'][0]['total_price'], 75.0)
 
 
+class TestBulkStatusUpdate(unittest.TestCase):
+    def setUp(self):
+        self.app = app.test_client()
+        app.config['TESTING'] = True
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+        with app.app_context():
+            db.create_all()
+
+    def tearDown(self):
+        with app.app_context():
+            db.session.remove()
+            db.drop_all()
+
+    def test_bulk_update_updates_eligible_orders(self):
+        """ Test that eligible orders get their status updated """
+        with app.app_context():
+            o1 = Order(user_id=1, total_price=10.0, status=StatusEnum.PENDING)
+            o2 = Order(user_id=2, total_price=20.0, status=StatusEnum.PENDING)
+            db.session.add_all([o1, o2])
+            db.session.commit()
+            ids = [o1.id, o2.id]
+
+        response = self.app.patch('/orders/bulk-status', json={'order_ids': ids, 'status': 'processing'})
+        data = json.loads(response.data.decode('utf-8'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(sorted(data['updated']), sorted(ids))
+        self.assertEqual(data['skipped'], [])
+
+    def test_bulk_update_skips_terminal_orders(self):
+        """ Test that delivered/cancelled orders are skipped """
+        with app.app_context():
+            o1 = Order(user_id=1, total_price=10.0, status=StatusEnum.PENDING)
+            o2 = Order(user_id=2, total_price=20.0, status=StatusEnum.DELIVERED)
+            db.session.add_all([o1, o2])
+            db.session.commit()
+            ids = [o1.id, o2.id]
+
+        response = self.app.patch('/orders/bulk-status', json={'order_ids': ids, 'status': 'shipped'})
+        data = json.loads(response.data.decode('utf-8'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(data['updated']), 1)
+        self.assertEqual(len(data['skipped']), 1)
+
+    def test_bulk_update_missing_order_ids(self):
+        """ Test validation when order_ids is absent """
+        response = self.app.patch('/orders/bulk-status', json={'status': 'shipped'})
+        self.assertEqual(response.status_code, 400)
+
+    def test_bulk_update_invalid_status(self):
+        """ Test validation when status value is invalid """
+        response = self.app.patch('/orders/bulk-status', json={'order_ids': [1], 'status': 'bogus'})
+        self.assertEqual(response.status_code, 400)
+
+    def test_bulk_update_skips_nonexistent_orders(self):
+        """ Test that non-existent order ids land in skipped """
+        response = self.app.patch('/orders/bulk-status', json={'order_ids': [9999], 'status': 'shipped'})
+        data = json.loads(response.data.decode('utf-8'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(9999, data['skipped'])
+
+
 class TestAuthMiddleware(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()
