@@ -11,17 +11,20 @@ Endpoints:
 - DELETE /orders/<int:order_id>: Cancel an order by order ID.
 - GET /orders/status/<string:status>: Get orders by their status.
 - GET /orders/<int:order_id>/items: Get all order items for a specific order.
+- PATCH /orders/bulk-status: Update status for a list of order IDs.
 """
 import logging
 from datetime import datetime
-from flask import jsonify, request
+from flask import Blueprint, jsonify, request
 from sqlalchemy import text
 from app.services import OrderService, OrderItemService
 from app import app, db
 from app.models import StatusEnum
 
+orders_bp = Blueprint('orders', __name__, url_prefix='/orders')
 order_service = OrderService()
 order_item_service = OrderItemService()
+
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -34,7 +37,8 @@ def health_check():
 
     return jsonify({'status': 'healthy', 'db': db_status}), 200
 
-@app.route('/orders', methods=['POST'])
+
+@orders_bp.route('', methods=['POST'])
 def create_order():
     """Create a new order."""
     try:
@@ -74,7 +78,8 @@ def create_order():
         logging.error(f"Error processing order creation: {str(exception)}")
         return jsonify({"error": "An error occurred while processing the request"}), 500
 
-@app.route('/orders', methods=['GET'])
+
+@orders_bp.route('', methods=['GET'])
 def get_orders():
     """Route to retrieve orders with optional pagination and date filtering."""
     try:
@@ -121,7 +126,8 @@ def get_orders():
     except Exception as exception:
         return jsonify({"error": str(exception)}), 500
 
-@app.route('/orders/bulk-status', methods=['PATCH'])
+
+@orders_bp.route('/bulk-status', methods=['PATCH'])
 def bulk_update_order_status():
     """Update status for a list of order IDs in one request."""
     try:
@@ -153,7 +159,7 @@ def bulk_update_order_status():
         return jsonify({"error": str(exception)}), 500
 
 
-@app.route('/orders/<int:order_id>', methods=['GET'])
+@orders_bp.route('/<int:order_id>', methods=['GET'])
 def get_order_details(order_id):
     """Get details of a specific order by order ID."""
     try:
@@ -165,7 +171,8 @@ def get_order_details(order_id):
     except Exception as exception:
         return jsonify({"error": str(exception)}), 500
 
-@app.route('/orders/<int:order_id>', methods=['PATCH'])
+
+@orders_bp.route('/<int:order_id>', methods=['PATCH'])
 def update_order_status(order_id):
     """Update the status of an order by order ID."""
     try:
@@ -198,7 +205,8 @@ def update_order_status(order_id):
     except Exception as exception:
         return jsonify({"error": str(exception)}), 500
 
-@app.route('/orders/user/<int:user_id>', methods=['GET'])
+
+@orders_bp.route('/user/<int:user_id>', methods=['GET'])
 def get_orders_by_user(user_id):
     """Get orders associated with a specific user."""
     try:
@@ -209,7 +217,8 @@ def get_orders_by_user(user_id):
         logging.exception("Error: %s", str(exception))
         return jsonify({"error": "An error occurred while processing the request"}), 500
 
-@app.route('/orders/<int:order_id>', methods=['DELETE'])
+
+@orders_bp.route('/<int:order_id>', methods=['DELETE'])
 def cancel_order(order_id):
     """Cancel an order by order ID."""
     try:
@@ -221,7 +230,8 @@ def cancel_order(order_id):
     except Exception as exception:
         return jsonify({"error": str(exception)}), 500
 
-@app.route('/orders/status/<string:status>', methods=['GET'])
+
+@orders_bp.route('/status/<string:status>', methods=['GET'])
 def get_orders_by_status(status):
     """Get orders by their status."""
     try:
@@ -231,7 +241,8 @@ def get_orders_by_status(status):
     except Exception as exception:
         return jsonify({"error": str(exception)}), 500
 
-@app.route('/orders/summary', methods=['GET'])
+
+@orders_bp.route('/summary', methods=['GET'])
 def get_orders_summary():
     """Return order counts grouped by status."""
     try:
@@ -240,7 +251,8 @@ def get_orders_summary():
     except Exception as exception:
         return jsonify({"error": str(exception)}), 500
 
-@app.route('/orders/<int:order_id>/items', methods=['GET'])
+
+@orders_bp.route('/<int:order_id>/items', methods=['GET'])
 def get_order_items(order_id):
     """Get all order items for a specific order."""
     try:
