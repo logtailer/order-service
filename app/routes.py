@@ -254,9 +254,10 @@ def get_orders_summary():
 
 @orders_bp.route('/<int:order_id>/items', methods=['GET'])
 def get_order_items(order_id):
-    """Get all order items for a specific order."""
+    """Get all order items for a specific order, optionally filtered by product_id."""
     try:
-        items = order_item_service.get_order_items(order_id)
+        product_id = request.args.get('product_id', type=int)
+        items = order_item_service.get_order_items(order_id, product_id=product_id)
         return jsonify(items), 200
 
     except Exception as exception:

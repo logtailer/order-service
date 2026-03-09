@@ -269,12 +269,13 @@ class OrderItemService:
     A class handling various operations related to order items.
     """
 
-    def get_order_items(self, order_id):
+    def get_order_items(self, order_id, product_id=None):
         """
         Retrieves all order items for a given order.
 
         Args:
         - order_id (int): ID of the order to retrieve items for.
+        - product_id (int, optional): Filter by product ID.
 
         Returns:
         - list: Serialized data of order items for the specified order.
@@ -283,7 +284,9 @@ class OrderItemService:
         - Exception: If an error occurs during retrieval of order items.
         """
         try:
-            items = OrderItem.query.filter_by(order_id=order_id).all()
-            return [item.to_dict() for item in items]
+            query = OrderItem.query.filter_by(order_id=order_id)
+            if product_id is not None:
+                query = query.filter_by(product_id=product_id)
+            return [item.to_dict() for item in query.all()]
         except Exception as exception:
             raise exception
