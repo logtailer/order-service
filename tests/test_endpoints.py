@@ -162,7 +162,7 @@ class TestOrderEndpoints(unittest.TestCase):
             db.session.commit()
 
             response = self.app.get(f'/orders/user/{user_id}')
-            
+
             data = json.loads(response.data.decode('utf-8'))
 
             self.assertEqual(response.status_code, 200)
@@ -237,6 +237,41 @@ class TestOrderEndpoints(unittest.TestCase):
 
             self.assertEqual(response.status_code, 200)
             self.assertIsInstance(data, list)
+
+    def test_get_order_items_filter_by_product_id(self):
+        """ Test filtering order items by product_id """
+        with app.app_context():
+            order = Order(user_id=1, total_price=60.0, status=StatusEnum.PENDING)
+            db.session.add(order)
+            db.session.flush()
+
+            db.session.add(OrderItem(order_id=order.id, product_id=10, quantity=1, price=20.0))
+            db.session.add(OrderItem(order_id=order.id, product_id=20, quantity=2, price=15.0))
+            db.session.add(OrderItem(order_id=order.id, product_id=10, quantity=1, price=10.0))
+            db.session.commit()
+
+            response = self.app.get(f'/orders/{order.id}/items?product_id=10')
+            data = json.loads(response.data.decode('utf-8'))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(data), 2)
+            for item in data:
+                self.assertEqual(item['product_id'], 10)
+
+    def test_get_order_items_product_id_no_match(self):
+        """ Test product_id filter returns empty list when no items match """
+        with app.app_context():
+            order = Order(user_id=1, total_price=20.0, status=StatusEnum.PENDING)
+            db.session.add(order)
+            db.session.flush()
+            db.session.add(OrderItem(order_id=order.id, product_id=5, quantity=1, price=20.0))
+            db.session.commit()
+
+            response = self.app.get(f'/orders/{order.id}/items?product_id=99')
+            data = json.loads(response.data.decode('utf-8'))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(data, [])
 
     def test_health_check_includes_db_status(self):
         """ Test that health check returns db connectivity status """
