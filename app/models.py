@@ -52,6 +52,27 @@ class Order(db.Model):
                f"total_price={self.total_price}, status='{self.status}'>"
 
 
+class OrderStatusHistory(db.Model):
+    """Records every status transition for an order."""
+
+    __tablename__ = 'order_status_history'
+
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
+    from_status = db.Column(db.Enum(StatusEnum), nullable=True)
+    to_status = db.Column(db.Enum(StatusEnum), nullable=False)
+    changed_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'order_id': self.order_id,
+            'from_status': self.from_status.value if self.from_status else None,
+            'to_status': self.to_status.value,
+            'changed_at': self.changed_at,
+        }
+
+
 class OrderItem(db.Model):
     """
     Represents an item within an order in the database.

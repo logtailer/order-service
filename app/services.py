@@ -5,7 +5,7 @@ as well as calculating order totals and fetching orders based on specific criter
 """
 from datetime import datetime
 from app import db
-from app.models import Order, OrderItem, StatusEnum
+from app.models import Order, OrderItem, OrderStatusHistory, StatusEnum
 
 class OrderService:
     """
@@ -54,6 +54,12 @@ class OrderService:
             new_order.total_price = total_price
 
             db.session.add(new_order)
+            db.session.flush()
+            db.session.add(OrderStatusHistory(
+                order_id=new_order.id,
+                from_status=None,
+                to_status=new_order.status,
+            ))
             db.session.commit()
             return new_order.id
         except Exception as exception:
@@ -149,8 +155,14 @@ class OrderService:
                 raise ValueError(f"Order is already {order.status.value} and cannot be updated")
 
             new_status = status_data.get('status')
+            prev_status = order.status
             order.status = new_status.upper()
             order.updated_at = datetime.utcnow()
+            db.session.add(OrderStatusHistory(
+                order_id=order.id,
+                from_status=prev_status,
+                to_status=order.status,
+            ))
             db.session.commit()
             return True
 
@@ -193,8 +205,14 @@ class OrderService:
         try:
             order = db.session.get(Order, order_id)
             if order:
+                prev_status = order.status
                 order.status = StatusEnum.CANCELLED
                 order.updated_at = datetime.utcnow()
+                db.session.add(OrderStatusHistory(
+                    order_id=order.id,
+                    from_status=prev_status,
+                    to_status=StatusEnum.CANCELLED,
+                ))
                 db.session.commit()
                 return True
             return False
@@ -243,6 +261,16 @@ class OrderService:
             raise exception
 
         return {"updated": updated, "skipped": skipped}
+
+    def get_order_history(self, order_id):
+        """Returns status transition history for an order, oldest first."""
+        rows = (
+            OrderStatusHistory.query
+            .filter_by(order_id=order_id)
+            .order_by(OrderStatusHistory.changed_at.asc())
+            .all()
+        )
+        return [r.to_dict() for r in rows]
 
     def get_orders_by_status(self, status):
         """
