@@ -264,6 +264,19 @@ def get_order_items(order_id):
         return jsonify({"error": str(exception)}), 500
 
 
+@orders_bp.route('/<int:order_id>/history', methods=['GET'])
+def get_order_history(order_id):
+    """Return the status transition history for an order."""
+    try:
+        order = order_service.get_order_by_id(order_id)
+        if not order:
+            return jsonify({"message": "Order not found"}), 404
+        history = order_service.get_order_history(order_id)
+        return jsonify(history), 200
+    except Exception as exception:
+        return jsonify({"error": str(exception)}), 500
+
+
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({"error": "not found"}), 404
