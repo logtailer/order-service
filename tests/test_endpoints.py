@@ -455,6 +455,70 @@ class TestOrderEndpoints(unittest.TestCase):
             self.assertEqual(data['orders'][0]['total_price'], 75.0)
 
 
+class TestOrderStatusHistory(unittest.TestCase):
+    def setUp(self):
+        self.app = app.test_client()
+        app.config['TESTING'] = True
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+        with app.app_context():
+            db.create_all()
+
+    def tearDown(self):
+        with app.app_context():
+            db.session.remove()
+            db.drop_all()
+
+    def _create_order(self):
+        response = self.app.post('/orders', json={
+            'user_id': 1, 'status': 'pending',
+            'items': [{'product_id': 1, 'quantity': 1, 'price': 10.0}],
+        })
+        return json.loads(response.data)['order_id']
+
+    def test_history_created_on_order_creation(self):
+        """ Test that a history entry is written when an order is created """
+        order_id = self._create_order()
+        response = self.app.get(f'/orders/{order_id}/history')
+        data = json.loads(response.data.decode('utf-8'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(data), 1)
+        self.assertIsNone(data[0]['from_status'])
+        self.assertEqual(data[0]['to_status'], 'pending')
+
+    def test_history_grows_on_status_update(self):
+        """ Test that each status update appends to history """
+        order_id = self._create_order()
+        self.app.patch(f'/orders/{order_id}', json={'status': 'processing'})
+        self.app.patch(f'/orders/{order_id}', json={'status': 'shipped'})
+
+        response = self.app.get(f'/orders/{order_id}/history')
+        data = json.loads(response.data.decode('utf-8'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(data), 3)
+        self.assertEqual(data[1]['from_status'], 'pending')
+        self.assertEqual(data[1]['to_status'], 'processing')
+        self.assertEqual(data[2]['from_status'], 'processing')
+        self.assertEqual(data[2]['to_status'], 'shipped')
+
+    def test_history_on_cancel(self):
+        """ Test that cancellation writes a history entry """
+        order_id = self._create_order()
+        self.app.delete(f'/orders/{order_id}')
+
+        response = self.app.get(f'/orders/{order_id}/history')
+        data = json.loads(response.data.decode('utf-8'))
+
+        self.assertEqual(len(data), 2)
+        self.assertEqual(data[-1]['to_status'], 'cancelled')
+
+    def test_history_404_for_unknown_order(self):
+        """ Test that history endpoint returns 404 for missing order """
+        response = self.app.get('/orders/9999/history')
+        self.assertEqual(response.status_code, 404)
+
+
 class TestBulkStatusUpdate(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()
