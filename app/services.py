@@ -67,12 +67,17 @@ class OrderService:
             raise exception
 
     def _build_orders_query(self, created_after=None, created_before=None,
+                            updated_after=None, updated_before=None,
                             status=None, user_id=None, min_price=None, max_price=None):
         query = Order.query
         if created_after:
             query = query.filter(Order.created_at >= created_after)
         if created_before:
             query = query.filter(Order.created_at <= created_before)
+        if updated_after:
+            query = query.filter(Order.updated_at >= updated_after)
+        if updated_before:
+            query = query.filter(Order.updated_at <= updated_before)
         if status:
             query = query.filter(Order.status == status.upper())
         if user_id:
@@ -84,6 +89,7 @@ class OrderService:
         return query
 
     def get_all_orders(self, page=1, per_page=20, created_after=None, created_before=None,
+                       updated_after=None, updated_before=None,
                        sort_by='created_at', sort_order='desc', status=None, user_id=None,
                        min_price=None, max_price=None):
         """
@@ -94,6 +100,7 @@ class OrderService:
         """
         query = self._build_orders_query(
             created_after=created_after, created_before=created_before,
+            updated_after=updated_after, updated_before=updated_before,
             status=status, user_id=user_id,
             min_price=min_price, max_price=max_price,
         )

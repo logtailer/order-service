@@ -88,10 +88,16 @@ def get_orders():
 
         created_after = None
         created_before = None
+        updated_after = None
+        updated_before = None
         if request.args.get('created_after'):
             created_after = datetime.fromisoformat(request.args.get('created_after'))
         if request.args.get('created_before'):
             created_before = datetime.fromisoformat(request.args.get('created_before'))
+        if request.args.get('updated_after'):
+            updated_after = datetime.fromisoformat(request.args.get('updated_after'))
+        if request.args.get('updated_before'):
+            updated_before = datetime.fromisoformat(request.args.get('updated_before'))
 
         sort_by = request.args.get('sort_by', 'created_at')
         sort_order = request.args.get('sort_order', 'desc')
@@ -113,6 +119,8 @@ def get_orders():
             per_page=per_page,
             created_after=created_after,
             created_before=created_before,
+            updated_after=updated_after,
+            updated_before=updated_before,
             sort_by=sort_by,
             sort_order=sort_order,
             status=status,
