@@ -228,9 +228,11 @@ def get_orders_by_user(user_id):
 
 @orders_bp.route('/<int:order_id>', methods=['DELETE'])
 def cancel_order(order_id):
-    """Cancel an order by order ID."""
+    """Cancel an order by order ID. Accepts optional JSON body with 'reason'."""
     try:
-        success = order_service.cancel_order(order_id)
+        body = request.get_json(silent=True) or {}
+        reason = body.get('reason')
+        success = order_service.cancel_order(order_id, reason=reason)
         if success:
             return jsonify({"message": "Order canceled"}), 200
         return jsonify({"message": "Order not found"}), 404

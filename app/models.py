@@ -61,6 +61,7 @@ class OrderStatusHistory(db.Model):
     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
     from_status = db.Column(db.Enum(StatusEnum), nullable=True)
     to_status = db.Column(db.Enum(StatusEnum), nullable=False)
+    reason = db.Column(db.String(255), nullable=True)
     changed_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
@@ -69,6 +70,7 @@ class OrderStatusHistory(db.Model):
             'order_id': self.order_id,
             'from_status': self.from_status.value if self.from_status else None,
             'to_status': self.to_status.value,
+            'reason': self.reason,
             'changed_at': self.changed_at,
         }
 

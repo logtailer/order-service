@@ -196,7 +196,7 @@ class OrderService:
         except Exception as exception:
             raise exception
 
-    def cancel_order(self, order_id):
+    def cancel_order(self, order_id, reason=None):
         """
         Cancels an order.
 
@@ -219,6 +219,7 @@ class OrderService:
                     order_id=order.id,
                     from_status=prev_status,
                     to_status=StatusEnum.CANCELLED,
+                    reason=reason,
                 ))
                 db.session.commit()
                 return True
