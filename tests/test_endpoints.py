@@ -6,6 +6,7 @@ This module contains unit tests for the endpoints related to orders in the appli
 
 import unittest
 import json
+from datetime import datetime
 from app import app, db
 from app.models import Order, OrderItem, StatusEnum
 
@@ -406,6 +407,44 @@ class TestOrderEndpoints(unittest.TestCase):
         with app.app_context():
             response = self.app.get('/orders?status=bogus')
             self.assertEqual(response.status_code, 400)
+
+    def test_get_orders_filter_by_updated_after(self):
+        """ Test filtering orders updated after a given timestamp """
+        with app.app_context():
+            from datetime import timedelta
+            now = datetime.utcnow()
+            old = Order(user_id=1, total_price=10.0, status=StatusEnum.PENDING)
+            old.updated_at = now - timedelta(days=5)
+            recent = Order(user_id=2, total_price=20.0, status=StatusEnum.PENDING)
+            recent.updated_at = now - timedelta(hours=1)
+            db.session.add_all([old, recent])
+            db.session.commit()
+
+            cutoff = (now - timedelta(days=1)).isoformat()
+            response = self.app.get(f'/orders?updated_after={cutoff}')
+            data = json.loads(response.data.decode('utf-8'))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(data['total'], 1)
+
+    def test_get_orders_filter_by_updated_before(self):
+        """ Test filtering orders updated before a given timestamp """
+        with app.app_context():
+            from datetime import timedelta
+            now = datetime.utcnow()
+            old = Order(user_id=1, total_price=10.0, status=StatusEnum.PENDING)
+            old.updated_at = now - timedelta(days=5)
+            recent = Order(user_id=2, total_price=20.0, status=StatusEnum.PENDING)
+            recent.updated_at = now - timedelta(hours=1)
+            db.session.add_all([old, recent])
+            db.session.commit()
+
+            cutoff = (now - timedelta(days=2)).isoformat()
+            response = self.app.get(f'/orders?updated_before={cutoff}')
+            data = json.loads(response.data.decode('utf-8'))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(data['total'], 1)
 
     def test_get_orders_filter_by_min_price(self):
         """ Test filtering orders with min_price """
