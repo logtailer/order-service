@@ -557,6 +557,28 @@ class TestOrderStatusHistory(unittest.TestCase):
         response = self.app.get('/orders/9999/history')
         self.assertEqual(response.status_code, 404)
 
+    def test_cancellation_reason_stored_in_history(self):
+        """ Test that reason passed to DELETE is persisted in history """
+        order_id = self._create_order()
+        self.app.delete(f'/orders/{order_id}', json={'reason': 'customer request'})
+
+        response = self.app.get(f'/orders/{order_id}/history')
+        data = json.loads(response.data.decode('utf-8'))
+
+        cancel_entry = data[-1]
+        self.assertEqual(cancel_entry['to_status'], 'cancelled')
+        self.assertEqual(cancel_entry['reason'], 'customer request')
+
+    def test_cancellation_without_reason_stores_null(self):
+        """ Test that omitting reason stores null in history """
+        order_id = self._create_order()
+        self.app.delete(f'/orders/{order_id}')
+
+        response = self.app.get(f'/orders/{order_id}/history')
+        data = json.loads(response.data.decode('utf-8'))
+
+        self.assertIsNone(data[-1]['reason'])
+
 
 class TestBulkStatusUpdate(unittest.TestCase):
     def setUp(self):
