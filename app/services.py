@@ -140,7 +140,7 @@ class OrderService:
         except Exception as exception:
             raise exception
 
-    def update_order_status(self, order_id, status_data):
+    def update_order_status(self, order_id, status_data, reason=None):
         """
         Update the status of an order by order ID.
 
@@ -169,6 +169,7 @@ class OrderService:
                 order_id=order.id,
                 from_status=prev_status,
                 to_status=order.status,
+                reason=reason,
             ))
             db.session.commit()
             return True

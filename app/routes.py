@@ -203,7 +203,8 @@ def update_order_status(order_id):
         if new_status not in valid_statuses:
             return jsonify({"error": "Invalid status provided"}), 400
 
-        success = order_service.update_order_status(order_id, status_data)
+        reason = status_data.get('reason')
+        success = order_service.update_order_status(order_id, status_data, reason=reason)
         if success:
             return jsonify({"message": "Order status updated"}), 200
         return jsonify({"message": "Order not found"}), 404
