@@ -306,6 +306,40 @@ class OrderItemService:
     A class handling various operations related to order items.
     """
 
+    def update_order_item(self, order_id, item_id, quantity):
+        """
+        Update quantity of a single order item and recalculate total_price.
+
+        Returns:
+        - dict: updated item, or None if order/item not found.
+
+        Raises:
+        - ValueError: if the order is in a terminal state.
+        """
+        order = db.session.get(Order, order_id)
+        if not order:
+            return None
+
+        terminal_statuses = {StatusEnum.DELIVERED, StatusEnum.CANCELLED}
+        if order.status in terminal_statuses:
+            raise ValueError(f"Cannot modify items on a {order.status.value} order")
+
+        item = OrderItem.query.filter_by(id=item_id, order_id=order_id).first()
+        if not item:
+            return None
+
+        item.quantity = quantity
+        order.total_price = sum(i.price * i.quantity for i in order.items)
+        order.updated_at = datetime.utcnow()
+
+        try:
+            db.session.commit()
+        except Exception as exception:
+            db.session.rollback()
+            raise exception
+
+        return item.to_dict()
+
     def get_order_items(self, order_id, product_id=None):
         """
         Retrieves all order items for a given order.

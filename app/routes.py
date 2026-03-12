@@ -275,6 +275,29 @@ def get_order_items(order_id):
         return jsonify({"error": str(exception)}), 500
 
 
+@orders_bp.route('/<int:order_id>/items/<int:item_id>', methods=['PATCH'])
+def update_order_item(order_id, item_id):
+    """Update the quantity of a specific order item."""
+    try:
+        body = request.get_json(silent=True) or {}
+        quantity = body.get('quantity')
+
+        if quantity is None:
+            return jsonify({"error": "quantity is required"}), 400
+        if not isinstance(quantity, int) or quantity <= 0:
+            return jsonify({"error": "quantity must be a positive integer"}), 400
+
+        result = order_item_service.update_order_item(order_id, item_id, quantity)
+        if result is None:
+            return jsonify({"message": "Order or item not found"}), 404
+        return jsonify(result), 200
+
+    except ValueError as exception:
+        return jsonify({"error": str(exception)}), 409
+    except Exception as exception:
+        return jsonify({"error": str(exception)}), 500
+
+
 @orders_bp.route('/<int:order_id>/history', methods=['GET'])
 def get_order_history(order_id):
     """Return the status transition history for an order."""
