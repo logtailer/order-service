@@ -316,6 +316,44 @@ class TestOrderEndpoints(unittest.TestCase):
             response = self.app.patch(f'/orders/{order.id}', json={'status': 'pending'})
             self.assertEqual(response.status_code, 409)
 
+    def test_get_orders_count(self):
+        """ Test that count endpoint returns total order count """
+        with app.app_context():
+            db.session.add(Order(user_id=1, total_price=10.0, status=StatusEnum.PENDING))
+            db.session.add(Order(user_id=1, total_price=20.0, status=StatusEnum.SHIPPED))
+            db.session.add(Order(user_id=2, total_price=30.0, status=StatusEnum.PENDING))
+            db.session.commit()
+
+            response = self.app.get('/orders/count')
+            data = json.loads(response.data.decode('utf-8'))
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(data['count'], 3)
+
+    def test_get_orders_count_filtered_by_status(self):
+        """ Test count endpoint filtered by status """
+        with app.app_context():
+            db.session.add(Order(user_id=1, total_price=10.0, status=StatusEnum.PENDING))
+            db.session.add(Order(user_id=2, total_price=20.0, status=StatusEnum.SHIPPED))
+            db.session.commit()
+
+            response = self.app.get('/orders/count?status=pending')
+            data = json.loads(response.data.decode('utf-8'))
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(data['count'], 1)
+
+    def test_get_orders_count_filtered_by_user_id(self):
+        """ Test count endpoint filtered by user_id """
+        with app.app_context():
+            db.session.add(Order(user_id=3, total_price=10.0, status=StatusEnum.PENDING))
+            db.session.add(Order(user_id=3, total_price=20.0, status=StatusEnum.SHIPPED))
+            db.session.add(Order(user_id=4, total_price=30.0, status=StatusEnum.PENDING))
+            db.session.commit()
+
+            response = self.app.get('/orders/count?user_id=3')
+            data = json.loads(response.data.decode('utf-8'))
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(data['count'], 2)
+
     def test_get_orders_summary(self):
         """ Test that summary endpoint returns counts per status """
         with app.app_context():
