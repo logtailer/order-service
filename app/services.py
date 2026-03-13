@@ -35,6 +35,7 @@ class OrderService:
             new_order = Order(
                 user_id=user_id,
                 status=status.upper(),
+                notes=order_data.get('notes'),
             )
 
             total_price = 0
@@ -270,6 +271,20 @@ class OrderService:
             raise exception
 
         return {"updated": updated, "skipped": skipped}
+
+    def update_order_notes(self, order_id, notes):
+        """Replace the notes on an order. Pass None to clear."""
+        order = db.session.get(Order, order_id)
+        if not order:
+            return False
+        order.notes = notes
+        order.updated_at = datetime.utcnow()
+        try:
+            db.session.commit()
+        except Exception as exception:
+            db.session.rollback()
+            raise exception
+        return True
 
     def count_orders(self, status=None, user_id=None):
         """Returns the total count of orders matching the given filters."""

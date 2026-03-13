@@ -253,6 +253,20 @@ def get_orders_by_status(status):
         return jsonify({"error": str(exception)}), 500
 
 
+@orders_bp.route('/<int:order_id>/notes', methods=['PATCH'])
+def update_order_notes(order_id):
+    """Set or clear the notes on an order."""
+    try:
+        body = request.get_json(silent=True) or {}
+        notes = body.get('notes')
+        success = order_service.update_order_notes(order_id, notes)
+        if not success:
+            return jsonify({"message": "Order not found"}), 404
+        return jsonify({"message": "Notes updated"}), 200
+    except Exception as exception:
+        return jsonify({"error": str(exception)}), 500
+
+
 @orders_bp.route('/count', methods=['GET'])
 def get_orders_count():
     """Return the total number of orders, with optional status and user_id filters."""
