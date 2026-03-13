@@ -253,6 +253,22 @@ def get_orders_by_status(status):
         return jsonify({"error": str(exception)}), 500
 
 
+@orders_bp.route('/count', methods=['GET'])
+def get_orders_count():
+    """Return the total number of orders, with optional status and user_id filters."""
+    try:
+        status = request.args.get('status')
+        user_id = request.args.get('user_id', type=int)
+
+        if status and status not in [s.value for s in StatusEnum]:
+            return jsonify({"error": f"status must be one of: {', '.join(s.value for s in StatusEnum)}"}), 400
+
+        count = order_service.count_orders(status=status, user_id=user_id)
+        return jsonify({"count": count}), 200
+    except Exception as exception:
+        return jsonify({"error": str(exception)}), 500
+
+
 @orders_bp.route('/summary', methods=['GET'])
 def get_orders_summary():
     """Return order counts grouped by status."""

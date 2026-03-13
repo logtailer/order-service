@@ -271,6 +271,15 @@ class OrderService:
 
         return {"updated": updated, "skipped": skipped}
 
+    def count_orders(self, status=None, user_id=None):
+        """Returns the total count of orders matching the given filters."""
+        query = Order.query
+        if status:
+            query = query.filter(Order.status == status.upper())
+        if user_id:
+            query = query.filter(Order.user_id == user_id)
+        return query.count()
+
     def get_order_history(self, order_id):
         """Returns status transition history for an order, oldest first."""
         rows = (
