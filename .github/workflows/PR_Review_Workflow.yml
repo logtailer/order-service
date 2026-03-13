@@ -30,6 +30,6 @@ jobs:
 
     - name: Run Tests and Calculate Coverage
       run: |
-        export FLASK_ENV=testing 
+        export FLASK_ENV=testing
         pip install pytest pytest-cov
         pytest -c pytest.ini --cov --cov-fail-under=80
