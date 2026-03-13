@@ -644,6 +644,74 @@ class TestBulkStatusUpdate(unittest.TestCase):
         self.assertIn(9999, data['skipped'])
 
 
+class TestOrderItemUpdate(unittest.TestCase):
+    def setUp(self):
+        self.app = app.test_client()
+        app.config['TESTING'] = True
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+        with app.app_context():
+            db.create_all()
+
+    def tearDown(self):
+        with app.app_context():
+            db.session.remove()
+            db.drop_all()
+
+    def _seed(self):
+        with app.app_context():
+            order = Order(user_id=1, total_price=30.0, status=StatusEnum.PENDING)
+            db.session.add(order)
+            db.session.flush()
+            item = OrderItem(order_id=order.id, product_id=1, quantity=3, price=10.0)
+            db.session.add(item)
+            db.session.commit()
+            return order.id, item.id
+
+    def test_update_item_quantity(self):
+        """ Test updating item quantity recalculates order total """
+        order_id, item_id = self._seed()
+        response = self.app.patch(f'/orders/{order_id}/items/{item_id}', json={'quantity': 5})
+        data = json.loads(response.data.decode('utf-8'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data['quantity'], 5)
+
+        with app.app_context():
+            order = db.session.get(Order, order_id)
+            self.assertAlmostEqual(order.total_price, 50.0)
+
+    def test_update_item_missing_quantity(self):
+        """ Test that omitting quantity returns 400 """
+        order_id, item_id = self._seed()
+        response = self.app.patch(f'/orders/{order_id}/items/{item_id}', json={})
+        self.assertEqual(response.status_code, 400)
+
+    def test_update_item_zero_quantity(self):
+        """ Test that quantity=0 returns 400 """
+        order_id, item_id = self._seed()
+        response = self.app.patch(f'/orders/{order_id}/items/{item_id}', json={'quantity': 0})
+        self.assertEqual(response.status_code, 400)
+
+    def test_update_item_on_delivered_order_rejected(self):
+        """ Test that modifying items on a delivered order returns 409 """
+        with app.app_context():
+            order = Order(user_id=1, total_price=10.0, status=StatusEnum.DELIVERED)
+            db.session.add(order)
+            db.session.flush()
+            item = OrderItem(order_id=order.id, product_id=1, quantity=1, price=10.0)
+            db.session.add(item)
+            db.session.commit()
+            order_id, item_id = order.id, item.id
+
+        response = self.app.patch(f'/orders/{order_id}/items/{item_id}', json={'quantity': 2})
+        self.assertEqual(response.status_code, 409)
+
+    def test_update_item_unknown_order(self):
+        """ Test that a missing order returns 404 """
+        response = self.app.patch('/orders/9999/items/1', json={'quantity': 2})
+        self.assertEqual(response.status_code, 404)
+
+
 class TestAuthMiddleware(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()
