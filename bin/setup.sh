@@ -1,13 +1,12 @@
 #!/bin/bash
+set -e
 
-echo "🔨 Building the Docker image..."
+echo "Building and starting order-service..."
+docker compose up --build -d
 
-docker build -t order-service:latest .
+echo "Waiting for service to be healthy..."
+until curl -sf http://localhost:5001/health > /dev/null; do
+  sleep 2
+done
 
-docker run -d -p 5000:5000 -e FLASK_ENV=testing order-service
-
-echo "🚀 The order-service Flask app is now running."
-echo "🌐 You can access it by opening a web browser and entering:"
-echo "   🌍 http://localhost:5000"
-echo "   or"
-echo "   🌐 http://YOUR_SERVER_IP:5000 (if accessing remotely)"
+echo "Service is up at http://localhost:5001"
