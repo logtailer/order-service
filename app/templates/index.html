@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Service</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header>
+    <h1>Order Service</h1>
+    <div class="health">
+      <span id="db-dot" class="dot"></span>
+      <span id="db-label">checking...</span>
+    </div>
+  </header>
+
+  <main>
+    <section id="summary" class="summary"></section>
+
+    <section class="orders-section">
+      <div class="toolbar">
+        <select id="status-filter">
+          <option value="">All statuses</option>
+          <option value="pending">pending</option>
+          <option value="processing">processing</option>
+          <option value="shipped">shipped</option>
+          <option value="delivered">delivered</option>
+          <option value="cancelled">cancelled</option>
+        </select>
+        <button id="refresh-btn">Refresh</button>
+        <button id="new-order-btn" class="primary">+ New Order</button>
+      </div>
+
+      <table id="orders-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>User</th>
+            <th>Status</th>
+            <th>Total</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody id="orders-tbody">
+          <tr><td colspan="5" class="empty">Loading...</td></tr>
+        </tbody>
+      </table>
+
+      <div class="pagination" id="pagination"></div>
+    </section>
+
+    <section class="detail-section hidden" id="detail-section">
+      <div class="detail-header">
+        <h2>Order <span id="detail-order-id"></span></h2>
+        <button id="close-detail">&#x2715;</button>
+      </div>
+      <div id="detail-content"></div>
+    </section>
+  </main>
+
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>New Order</h2>
+        <button id="close-modal">&#x2715;</button>
+      </div>
+      <form id="create-form">
+        <label>User ID
+          <input type="number" name="user_id" required min="1">
+        </label>
+        <label>Status
+          <select name="status">
+            <option value="pending">pending</option>
+            <option value="processing">processing</option>
+            <option value="shipped">shipped</option>
+          </select>
+        </label>
+        <label>Notes
+          <textarea name="notes" rows="2"></textarea>
+        </label>
+        <div class="items-header">
+          <strong>Items</strong>
+          <button type="button" id="add-item-btn">+ Add Item</button>
+        </div>
+        <div id="items-container"></div>
+        <div class="form-actions">
+          <button type="button" id="cancel-btn">Cancel</button>
+          <button type="submit" class="primary">Create Order</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 """Routes for the orders blueprint and app-level error handlers."""
 import logging
 from datetime import datetime
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, render_template
 from sqlalchemy import text
 from app import app, db
 from app.models import StatusEnum
@@ -23,6 +23,11 @@ from app.services import (
 )
 
 orders_bp = Blueprint('orders', __name__, url_prefix='/orders')
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 
 @app.route('/health', methods=['GET'])
