@@ -21,7 +21,7 @@ run_migrations() {
 # Start the application
 start_app() {
   echo "Starting application..."
-  exec python run.py
+  exec gunicorn --workers 4 --bind 0.0.0.0:5000 --access-logfile - --error-logfile - wsgi:app
 }
 
 # Main execution flow

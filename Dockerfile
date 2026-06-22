@@ -41,7 +41,7 @@ RUN pip install --no-cache-dir /wheels/*
 # Copy only necessary files
 COPY app/ ./app/
 COPY migrations/ ./migrations/
-COPY run.py manage.py entrypoint.sh ./
+COPY run.py manage.py entrypoint.sh wsgi.py ./
 
 # Set permissions and configuration
 RUN chmod +x /order-service/entrypoint.sh
