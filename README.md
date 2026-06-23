@@ -1,5 +1,7 @@
 # order-service
 
+[![CI](https://github.com/logtailer/order-service/actions/workflows/docker-image.yml/badge.svg)](https://github.com/logtailer/order-service/actions/workflows/docker-image.yml)
+
 A Flask microservice for order management with a built-in web UI. Backed by PostgreSQL, containerised with Docker, and schema-managed with Alembic migrations.
 
 ---
